@@ -30,6 +30,10 @@
             width: 95%;
             overflow: hidden;
         }
+        .confirm-dialog {
+            width: 400px;
+            max-width: 90%;
+        }
         .dialog-header {
             background-color: #f07d00;
             color: white;
@@ -217,7 +221,7 @@
     function showConfirmDialog(title, message, onConfirm, onCancel) {
         const overlay = $('<div>', { class: 'dialog-overlay' });
         const dialog = $('<div>', {
-            class: 'custom-dialog',
+            class: 'custom-dialog confirm-dialog',
             html: `
                     <div class="dialog-header">
                         <h2>${title}</h2>
