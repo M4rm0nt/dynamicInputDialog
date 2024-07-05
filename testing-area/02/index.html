@@ -169,6 +169,8 @@
 <body>
 <button id="button1">Dialog 1 öffnen</button>
 <button id="button2">Dialog 2 öffnen</button>
+<button id="button3">Dokument löschen</button>
+<button id="button4">Dokument bearbeiten</button>
 
 <div class="toast-container">
     <div id="toast" class="toast">
@@ -179,9 +181,30 @@
 
 <script>
     $(document).ready(function() {
+
+        const $body = $('body');
+        const $toast = $('#toast');
+        const $toastMessage = $('#toast-message');
+
+        $body.on('click', '#button1', function() {
+            createCustomDialog(content1, "Berechtigung hochladen", prepearePermissionFormdata, "Hochladen");
+        });
+
+        $body.on('click', '#button2', function() {
+            createCustomDialog(content2, "Datei hochladen", prepearePermissionFormdata, "Hochladen");
+        });
+
+        $body.on('click', '#button3', function() {
+            openDeleteDialog(1);
+        });
+
+        $body.on('click', '#button4', function() {
+            openEditDialog(1);
+        });
+
         function createCustomDialog(content, title, onUploadClick, buttonTitle) {
-            const overlay = $('<div>', { class: 'dialog-overlay' });
-            const dialog = $('<div>', {
+            const $overlay = $('<div>', { class: 'dialog-overlay' });
+            const $dialog = $('<div>', {
                 id: 'customDialog',
                 class: 'custom-dialog',
                 html: `
@@ -197,24 +220,24 @@
             `
             });
 
-            overlay.append(dialog);
-            $('body').append(overlay);
+            $overlay.append($dialog);
+            $body.append($overlay);
 
-            $('.close-btn, #cancelBtn').on('click', closeCustomDialog);
-            $('#uploadBtn').off('click').on('click', onUploadClick);
+            $overlay.on('click', '.close-btn, #cancelBtn', closeCustomDialog);
+            $overlay.on('click', '#uploadBtn', onUploadClick);
 
-            overlay.on('click', function(event) {
+            $overlay.on('click', function(event) {
                 if (event.target === this) {
                     showConfirmDialog(
                         "Warnung",
                         "Möchten Sie das Upload-Fenster wirklich schließen?\nAlle nicht gespeicherten Änderungen gehen verloren.",
                         closeCustomDialog,
-                        () => {} // Nichts tun, wenn der Benutzer "Nein" wählt
+                        $.noop // Use $.noop instead of an empty function
                     );
                 }
             });
 
-            return dialog;
+            return $dialog;
         }
 
         function closeCustomDialog() {
@@ -223,8 +246,8 @@
         }
 
         function showConfirmDialog(title, message, onConfirm, onCancel) {
-            const overlay = $('<div>', { class: 'dialog-overlay' });
-            const dialog = $('<div>', {
+            const $overlay = $('<div>', { class: 'dialog-overlay' });
+            const $dialog = $('<div>', {
                 class: 'custom-dialog confirm-dialog',
                 html: `
                 <div class="dialog-header">
@@ -241,39 +264,35 @@
             `
             });
 
-            overlay.append(dialog);
-            $('body').append(overlay);
+            $overlay.append($dialog);
+            $body.append($overlay);
 
-            $('#confirmBtn').on('click', function() {
+            // Use .on() for event binding
+            $overlay.on('click', '#confirmBtn', function() {
                 onConfirm();
-                overlay.remove();
+                closeCustomDialog();
             });
-
-            $('.close-btn, #cancelBtn').on('click', function() {
+            $overlay.on('click', '#cancelBtn', function() {
                 onCancel();
-                overlay.remove();
+                closeCustomDialog();
             });
 
-            return dialog;
+            return $dialog;
         }
 
-        function showToast(message, duration = 3000) {
-            const toast = $('#toast');
-            const toastMessage = $('#toast-message');
-
-            toastMessage.text(message);
-            toast.addClass('show');
-
+        function showToast(message) {
+            $toastMessage.text(message);
+            $toast.addClass('show');
             setTimeout(function() {
-                toast.removeClass('show');
-            }, duration);
+                $toast.removeClass('show');
+            }, 3000);
         }
 
         function clearForm() {
-            const form = $('#docUploadForm');
-            if (form.length > 0) {
-                form[0].reset();
-            }
+            // Clear forms on the page
+            $('form').each(function() {
+                this.reset();
+            });
         }
 
         function prepearePermissionFormdata() {
@@ -290,53 +309,89 @@
             closeCustomDialog();
         }
 
-        $('#button1').on('click', function() {
-            const content1 = `
-            <form id="docUploadForm" class="upload-form">
-                <div class="form-group required">
-                    <label for="permissionName">Name:</label>
-                    <input type="text" id="permissionName" name="permissionName" required>
-                </div>
-                <div class="form-group required">
-                    <label for="permissionDescription">Beschreibung:</label>
-                    <textarea id="permissionDescription" name="permissionBeschreibung" required></textarea>
-                </div>
-                <div class="form-group required">
-                    <label for="permission">Berechtigung:</label>
-                    <select id="permission" name="permission" required>
-                        <option value="">Bitte auswählen</option>
-                        <option value="lesen">Lesen</option>
-                        <option value="schreiben">Schreiben</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-            </form>`;
-            createCustomDialog(content1, "Berechtigung hochladen", prepearePermissionFormdata, "Hochladen");
-        });
+        function prepeareDeleteDocument(id) {
+            showToast(`Dokument mit ID ${id} wird gelöscht...`);
+            closeCustomDialog();
+        }
 
-        $('#button2').on('click', function() {
-            const content2 = `
-            <form id="docUploadForm" class="upload-form">
+        function openDeleteDialog(id) {
+            const content = 'Sind Sie sicher, dass Sie dieses Dokument löschen möchten?';
+            const title = 'Dokument löschen';
+            createCustomDialog(content, title, function() { prepeareDeleteDocument(id); }, 'Löschen');
+        }
+
+        function prepeareEditData(id) {
+            showToast(`Dokument mit ID ${id} wird bearbeitet...`);
+            closeCustomDialog();
+        }
+
+        function openEditDialog(id) {
+            const content = `
+            <form id="docUploadForm">
                 <div class="form-group required">
-                    <label for="fileName">Dateiname:</label>
-                    <input type="text" id="fileName" name="fileName" required>
-                </div>
-                <div class="form-group required">
-                    <label for="fileDescription">Beschreibung:</label>
-                    <textarea id="fileDescription" name="fileBeschreibung" required></textarea>
-                </div>
-                <div class="form-group required">
-                    <label for="fileType">Dateityp:</label>
-                    <select id="fileType" name="fileType" required>
+                    <label for="language">Sprache:</label>
+                    <select id="language" name="language" required>
                         <option value="">Bitte auswählen</option>
-                        <option value="pdf">PDF</option>
-                        <option value="doc">DOC</option>
-                        <option value="txt">TXT</option>
+                        <option value="DE">Deutsch</option>
+                        <option value="EN">Englisch</option>
                     </select>
                 </div>
+                <div class="form-group required">
+                    <label for="documentName">Dokumentname:</label>
+                    <input type="text" id="documentName" name="dokumentName" required>
+                </div>
+                <div class="form-group required">
+                    <label for="documentDescription">Beschreibung:</label>
+                    <textarea id="documentDescription" name="dokumentBeschreibung" required></textarea>
+                </div>
             </form>`;
-            createCustomDialog(content2, "Datei hochladen", prepearePermissionFormdata, "Hochladen");
-        });
+
+            const title = 'Dokument bearbeiten';
+            createCustomDialog(content, title, function() { prepeareEditData(id); }, 'Bearbeiten');
+        }
+
+        // Define content variables outside of click handlers
+        const content1 = `
+        <form id="docUploadForm" class="upload-form">
+            <div class="form-group required">
+                <label for="permissionName">Name:</label>
+                <input type="text" id="permissionName" name="permissionName" required>
+            </div>
+            <div class="form-group required">
+                <label for="permissionDescription">Beschreibung:</label>
+                <textarea id="permissionDescription" name="permissionBeschreibung" required></textarea>
+            </div>
+            <div class="form-group required">
+                <label for="permission">Berechtigung:</label>
+                <select id="permission" name="permission" required>
+                    <option value="">Bitte auswählen</option>
+                    <option value="lesen">Lesen</option>
+                    <option value="schreiben">Schreiben</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+        </form>`;
+
+        const content2 = `
+        <form id="docUploadForm" class="upload-form">
+            <div class="form-group required">
+                <label for="fileName">Dateiname:</label>
+                <input type="text" id="fileName" name="fileName" required>
+            </div>
+            <div class="form-group required">
+                <label for="fileDescription">Beschreibung:</label>
+                <textarea id="fileDescription" name="fileBeschreibung" required></textarea>
+            </div>
+            <div class="form-group required">
+                <label for="fileType">Dateityp:</label>
+                <select id="fileType" name="fileType" required>
+                    <option value="">Bitte auswählen</option>
+                    <option value="pdf">PDF</option>
+                    <option value="doc">DOC</option>
+                    <option value="txt">TXT</option>
+                </select>
+            </div>
+        </form>`;
     });
 </script>
 </body>
